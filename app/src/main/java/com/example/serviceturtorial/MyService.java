@@ -3,6 +3,7 @@ package com.example.serviceturtorial;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -21,6 +22,12 @@ import java.util.Date;
 public class MyService extends Service {
 
     private MediaPlayer mediaPlayer;
+    public static final int ACTION_PAUSE = 1;
+    public static final int ACTION_RESUME = 2;
+    public static final int ACTION_CLEAR = 3;
+
+    private boolean isPlaying;
+    private Song mSong;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -41,12 +48,44 @@ public class MyService extends Service {
             Song song = (Song) bundle.get("object_song");
 
             if (song != null){
+                mSong = song;
                 startMusic(song);
                 sendNotification(song);
+
             }
 
         }
+        int actionMusic = intent.getIntExtra("action_music_service",0);
+        handleMusic(actionMusic);
         return START_NOT_STICKY;
+    }
+    private void handleMusic(int action){
+        switch (action){
+            case ACTION_PAUSE:
+                pauseMusic();
+                break;
+            case ACTION_RESUME:
+                resumeMusic();
+                break;
+            case ACTION_CLEAR:
+                stopSelf();
+                break;
+        }
+    }
+
+    private void pauseMusic(){
+        if (mediaPlayer != null && isPlaying){
+            mediaPlayer.pause();
+            isPlaying = false;
+            sendNotification(mSong);
+        }
+    }
+    private void resumeMusic(){
+        if (mediaPlayer != null && !isPlaying){
+            mediaPlayer.start();
+            isPlaying = true;
+            sendNotification(mSong);
+        }
     }
 
     private void startMusic(Song song) {
@@ -54,6 +93,7 @@ public class MyService extends Service {
             mediaPlayer = MediaPlayer.create(getApplicationContext(),song.getResource());
         }
         mediaPlayer.start();
+        isPlaying = true;
     }
 
     private void sendNotification(@NonNull Song song) {
@@ -62,6 +102,17 @@ public class MyService extends Service {
         remoteViews.setTextViewText(R.id.tv_singer_song,song.getSinger());
         remoteViews.setImageViewResource(R.id.img_song,song.getImage());
         remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+
+        if (isPlaying){
+            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_PAUSE));
+            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_pause_circle_24);
+        }else {
+            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_RESUME));
+            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+        }
+
+        remoteViews.setOnClickPendingIntent(R.id.img_clear,getPendingIntent(this,ACTION_CLEAR));
+
 
         Intent intent = new Intent(this,MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this,0,intent,
@@ -77,7 +128,14 @@ public class MyService extends Service {
 
         startForeground(2,notification);
     }
+    private PendingIntent getPendingIntent(Context context, int action){
+        Intent intent = new Intent(context,MyBroadcastReceiver.class);
+        intent.putExtra("action_music",action);
 
+
+        return PendingIntent.getBroadcast(context.getApplicationContext(),action,
+                intent,PendingIntent.FLAG_UPDATE_CURRENT);
+    }
     @Override
     public void onDestroy() {
         super.onDestroy();
