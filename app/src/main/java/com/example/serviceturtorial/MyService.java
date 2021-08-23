@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -19,6 +20,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.Date;
+
+import static com.example.serviceturtorial.MyApplication.CHANNEL_ID;
 
 public class MyService extends Service {
 
@@ -52,7 +55,7 @@ public class MyService extends Service {
             if (song != null){
                 mSong = song;
                 startMusic(song);
-                sendNotification(song);
+                sendNotificationMedia(song);
 
             }
 
@@ -80,7 +83,7 @@ public class MyService extends Service {
         if (mediaPlayer != null && isPlaying){
             mediaPlayer.pause();
             isPlaying = false;
-            sendNotification(mSong);
+            sendNotificationMedia(mSong);
             sendActionToActivity(ACTION_PAUSE);
         }
     }
@@ -88,7 +91,7 @@ public class MyService extends Service {
         if (mediaPlayer != null && !isPlaying){
             mediaPlayer.start();
             isPlaying = true;
-            sendNotification(mSong);
+            sendNotificationMedia(mSong);
             sendActionToActivity(ACTION_RESUME);
 
         }
@@ -103,36 +106,64 @@ public class MyService extends Service {
         sendActionToActivity(ACTION_START);
     }
 
-    private void sendNotification(@NonNull Song song) {
-        RemoteViews remoteViews = new RemoteViews(getPackageName(),R.layout.custom_notification);
-        remoteViews.setTextViewText(R.id.tv_title_song,song.getTitle());
-        remoteViews.setTextViewText(R.id.tv_singer_song,song.getSinger());
-        remoteViews.setImageViewResource(R.id.img_song,song.getImage());
-        remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+//    private void sendNotification(@NonNull Song song) {
+//        RemoteViews remoteViews = new RemoteViews(getPackageName(),R.layout.custom_notification);
+//        remoteViews.setTextViewText(R.id.tv_title_song,song.getTitle());
+//        remoteViews.setTextViewText(R.id.tv_singer_song,song.getSinger());
+//        remoteViews.setImageViewResource(R.id.img_song,song.getImage());
+//        remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+//
+//        if (isPlaying){
+//            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_PAUSE));
+//            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_pause_circle_24);
+//        }else {
+//            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_RESUME));
+//            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+//        }
+//
+//        remoteViews.setOnClickPendingIntent(R.id.img_clear,getPendingIntent(this,ACTION_CLEAR));
+//
+//
+//        Intent intent = new Intent(this,MainActivity.class);
+//        PendingIntent pendingIntent = PendingIntent.getActivity(this,0,intent,
+//                PendingIntent.FLAG_UPDATE_CURRENT);
+//        Notification notification = new NotificationCompat.Builder(this,
+//                MyApplication.CHANNEL_ID)
+//                .setSmallIcon(R.drawable.ic_android_black_24dp)
+//                .setContentIntent(pendingIntent)
+//                .setCustomContentView(remoteViews)
+//                .setSound(null)
+//                .build();
+//
+//
+//        startForeground(2,notification);
+//    }
+
+
+    private void sendNotificationMedia(@NonNull Song song){
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.my_avt);
+
+        MediaSessionCompat sessionCompat = new MediaSessionCompat(this,"tag");
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this,CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_baseline_library_music_24)
+                .setSubText("My Music")
+                .setContentTitle(song.getTitle())
+                .setContentText(song.getSinger())
+                .setLargeIcon(bitmap)
+                .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                    .setShowActionsInCompactView(0,1,2)
+                    .setMediaSession(sessionCompat.getSessionToken()));
 
         if (isPlaying){
-            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_PAUSE));
-            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_pause_circle_24);
+            builder.addAction(R.drawable.ic_baseline_skip_previous_24,"Previous",null)
+                    .addAction(R.drawable.ic_baseline_pause_circle_24,"Pause",getPendingIntent(this,ACTION_PAUSE))
+                    .addAction(R.drawable.ic_baseline_skip_next_24,"Next",null);
         }else {
-            remoteViews.setOnClickPendingIntent(R.id.img_play_or_pause,getPendingIntent(this,ACTION_RESUME));
-            remoteViews.setImageViewResource(R.id.img_play_or_pause,R.drawable.ic_baseline_play_arrow_24);
+            builder.addAction(R.drawable.ic_baseline_skip_previous_24,"Previous",null)
+                    .addAction(R.drawable.ic_baseline_play_arrow_24,"Pause",getPendingIntent(this,ACTION_RESUME))
+                    .addAction(R.drawable.ic_baseline_skip_next_24,"Next",null);
         }
-
-        remoteViews.setOnClickPendingIntent(R.id.img_clear,getPendingIntent(this,ACTION_CLEAR));
-
-
-        Intent intent = new Intent(this,MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this,0,intent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification notification = new NotificationCompat.Builder(this,
-                MyApplication.CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_android_black_24dp)
-                .setContentIntent(pendingIntent)
-                .setCustomContentView(remoteViews)
-                .setSound(null)
-                .build();
-
-
+        Notification notification = builder.build();
         startForeground(2,notification);
     }
     private PendingIntent getPendingIntent(Context context, int action){
