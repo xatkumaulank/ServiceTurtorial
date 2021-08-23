@@ -136,7 +136,7 @@ public class MyService extends Service {
 //                .build();
 //
 //
-//        startForeground(2,notification);
+//        startForeground(10,notification);
 //    }
 
 
@@ -151,8 +151,10 @@ public class MyService extends Service {
                 .setContentText(song.getSinger())
                 .setLargeIcon(bitmap)
                 .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-                    .setShowActionsInCompactView(0,1,2)
-                    .setMediaSession(sessionCompat.getSessionToken()));
+                    .setShowActionsInCompactView(1)
+                    .setMediaSession(sessionCompat.getSessionToken()
+                    )
+                );
 
         if (isPlaying){
             builder.addAction(R.drawable.ic_baseline_skip_previous_24,"Previous",null)
@@ -164,7 +166,7 @@ public class MyService extends Service {
                     .addAction(R.drawable.ic_baseline_skip_next_24,"Next",null);
         }
         Notification notification = builder.build();
-        startForeground(2,notification);
+        startForeground(5,notification);
     }
     private PendingIntent getPendingIntent(Context context, int action){
         Intent intent = new Intent(context,MyBroadcastReceiver.class);
